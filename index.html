@@ -1,0 +1,27 @@
+<!doctype html><html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Movie Translator - Mic Test</title>
+<style>
+body{margin:0;background:#0b1020;color:#fff;font-family:-apple-system,BlinkMacSystemFont,Arial;padding:18px}
+.card{max-width:700px;margin:12px auto;padding:18px;background:#121a2d;border-radius:18px}
+button,select{width:100%;padding:14px;margin-top:10px;border:0;border-radius:12px;background:#2563eb;color:white;font-size:16px}
+.status{margin-top:12px;background:#0e1628;padding:14px;border-radius:12px;line-height:1.6}.meter{height:18px;background:#202b43;border-radius:9px;margin-top:12px;overflow:hidden}#bar{height:100%;width:0;background:#4ade80}
+small{color:#aeb9cc;line-height:1.6}
+</style></head><body>
+<div class="card"><h1>🎙️ Movie Translator</h1>
+<small>اختبار ميكروفون iPhone. يجب فتح الصفحة من HTTPS وليس كملف محلي.</small>
+<select id="lang"><option value="de-DE">الألمانية</option><option value="en-US">الإنجليزية</option><option value="fr-FR">الفرنسية</option><option value="tr-TR">التركية</option></select>
+<button id="start">🎙️ تشغيل الميكروفون</button><button id="stop">⏹️ إيقاف</button>
+<div class="meter"><div id="bar"></div></div><div id="status" class="status">لم يبدأ الاختبار.</div></div>
+<script>
+let stream,ctx,analyser,data,raf;
+const status=document.getElementById('status'),bar=document.getElementById('bar');
+function stopAll(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(t=>t.stop());if(ctx)ctx.close();stream=null;ctx=null;status.textContent="تم إيقاف الميكروفون.";bar.style.width="0%";}
+start.onclick=async()=>{try{
+if(!navigator.mediaDevices?.getUserMedia)throw Error("getUserMedia غير متاح. افتح الصفحة عبر HTTPS.");
+stream=await navigator.mediaDevices.getUserMedia({audio:true});ctx=new (AudioContext||webkitAudioContext)();
+let src=ctx.createMediaStreamSource(stream);analyser=ctx.createAnalyser();analyser.fftSize=256;src.connect(analyser);data=new Uint8Array(analyser.frequencyBinCount);
+status.textContent="✅ الميكروفون يعمل. شغّل الفيلم بصوت مسموع. مستوى الصوت سيظهر أسفل الزر.";
+function loop(){analyser.getByteTimeDomainData(data);let sum=0;for(let x of data){let v=(x-128)/128;sum+=v*v}let level=Math.min(100,Math.sqrt(sum/data.length)*220);bar.style.width=level+"%";raf=requestAnimationFrame(loop)}loop();
+}catch(e){status.textContent="❌ "+e.message;}};stop.onclick=stopAll;
+</script></body></html>
