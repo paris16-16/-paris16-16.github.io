@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Movie Translator — مشغل الترجمة</title>
+<style>
+:root{--bg:#07111d;--panel:#0d1b2b;--panel2:#12253a;--line:#20364e;--text:#f5f7fa;--muted:#9eb0c4;--accent:#168cff}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#06101b,#091625);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:1250px;margin:auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;padding:8px 4px 18px}
+.brand{display:flex;gap:12px;align-items:center}.logo{font-size:34px}.brand h1{font-size:25px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(260px,.9fr);gap:16px}
+.panel{background:rgba(13,27,43,.96);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px #0004}
+.player{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9}
+video,.movieFrame{width:100%;height:100%;border:0;display:block;background:#000}
+.subtitle{position:absolute;left:6%;right:6%;bottom:12%;padding:10px 14px;border-radius:10px;background:rgba(0,0,0,.72);text-align:center;font-size:clamp(17px,2.2vw,28px);line-height:1.45;pointer-events:none;text-shadow:0 2px 3px #000}
+.subtitle .orig{display:block;font-size:.65em;color:#ddd;margin-bottom:2px;direction:ltr}
+.controls{display:flex;gap:9px;align-items:center;margin-top:10px}.controls button{background:#162a40;color:#fff;border:1px solid #2a4560;border-radius:10px;padding:10px 13px}
+.controls input[type=range]{flex:1}
+.status{margin-top:10px;padding:10px 12px;background:#0a1726;border-radius:10px;color:#b9c8d7;font-size:14px}
+label{display:block;color:#cbd7e4;font-size:14px;margin:12px 0 6px}
+input,select{width:100%;padding:12px;border-radius:10px;border:1px solid #2a4560;background:#0a1726;color:#fff;font-size:15px}
+button.primary{width:100%;background:var(--accent);border:0;color:#fff;padding:13px;border-radius:11px;font-size:16px;font-weight:700;margin-top:10px}
+button.stop{width:100%;background:#27384a;border:0;color:#fff;padding:13px;border-radius:11px;font-size:16px;margin-top:8px}
+.meter{height:7px;background:#26384a;border-radius:8px;overflow:hidden;margin-top:10px}.meter i{display:block;height:100%;width:0;background:#28d17c}
+.transcript{margin-top:16px}.row{display:grid;grid-template-columns:70px 1fr 1fr;gap:10px;padding:10px;border-bottom:1px solid #1b3045;font-size:14px}.row .time{color:#8fa4b8}.row .en{direction:ltr;text-align:left}.row .ar{color:#dce7f2}
+.hint{font-size:12px;color:#8ea2b6;line-height:1.5;margin-top:10px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.subtitle{bottom:11%;font-size:18px}.row{grid-template-columns:55px 1fr}.row .ar{grid-column:2}.brand h1{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand"><div class="logo">🎬</div><div><h1>Movie Translator</h1><p>مشغل فيلم مع ترجمة عربية تلقائية من الصوت</p></div></div>
+  <div>⚙️</div>
+</header>
+
+<div class="grid">
+<section>
+  <div class="panel">
+    <div class="player">
+      <video id="video" playsinline controls style="display:none"></video>
+      <iframe id="frame" class="movieFrame" allow="autoplay; fullscreen; microphone" referrerpolicy="no-referrer"></iframe>
+      <div class="subtitle" id="sub"><span class="orig"></span><span class="ar">الترجمة العربية ستظهر هنا</span></div>
+    </div>
+    <div class="controls" id="directControls" style="display:none">
+      <button id="play">▶️</button><button id="mute">🔊</button><input id="seek" type="range" min="0" max="100" value="0">
+    </div>
+    <div class="status" id="status">جاهز. شغّل الفيلم ثم اضغط «بدء الترجمة».</div>
+  </div>
+
+  <div class="panel transcript">
+    <h3 style="margin:0 0 8px">💬 الترجمة الحية</h3>
+    <div id="rows"><div class="row"><div class="time">—</div><div class="en">لم يصل كلام بعد</div><div class="ar">—</div></div></div>
+  </div>
+</section>
+
+<aside>
+  <div class="panel">
+    <label>مصدر الفيلم</label>
+    <input id="source" value="https://www.streamex.hn/watch/tv/247718?s=2&e=3&server=vidy" placeholder="رابط صفحة الفيلم أو رابط فيديو مباشر">
+    <button class="primary" id="load">فتح الفيلم</button>
+    <div class="hint">إذا رفض الموقع الظهور داخل الإطار، فهذا يعني أنه يمنع التضمين. عندها نستخدم رابط فيديو مباشر أو نفتح الفيلم في تبويب منفصل.</div>
+
+    <label>لغة الفيلم</label>
+    <select id="lang"><option value="en-US">English</option><option value="de-DE">Deutsch</option><option value="fr-FR">Français</option><option value="tr-TR">Türkçe</option></select>
+
+    <button class="primary" id="start">🎙️ بدء الترجمة</button>
+    <button class="stop" id="stop" disabled>⏹️ إيقاف</button>
+    <div class="meter"><i id="bar"></i></div>
+
+    <label>حجم الترجمة</label>
+    <input id="size" type="range" min="14" max="36" value="24">
+
+    <label>شفافية خلفية الترجمة</label>
+    <input id="opacity" type="range" min="20" max="90" value="72">
+  </div>
+</aside>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const source=$("source"), frame=$("frame"), video=$("video"), status=$("status");
+let recognition=null, listening=false, finalText="", audioCtx=null, analyser=null, stream=null, raf=null;
+
+function setStatus(x){status.textContent=x}
+function addRow(en,ar){
+  const row=document.createElement("div"); row.className="row";
+  const t=document.createElement("div"); t.className="time"; t.textContent=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  const e=document.createElement("div"); e.className="en"; e.textContent=en;
+  const a=document.createElement("div"); a.className="ar"; a.textContent=ar||"…";
+  row.append(t,e,a); $("rows").prepend(row);
+  while($("rows").children.length>8) $("rows").lastChild.remove();
+}
+function isDirectVideo(u){return /\.(mp4|webm|ogg|m3u8)(\?.*)?$/i.test(u)}
+$("load").onclick=()=>{
+  const u=source.value.trim(); if(!u)return;
+  if(isDirectVideo(u)){
+    frame.style.display="none"; video.style.display="block"; $("directControls").style.display="flex";
+    video.src=u; video.load(); setStatus("تم تحميل رابط الفيديو المباشر.");
+  }else{
+    video.style.display="none"; $("directControls").style.display="none"; frame.style.display="block";
+    frame.src=u; setStatus("تم فتح صفحة الفيلم داخل المشغل. إذا لم تظهر، فالموقع يمنع التضمين.");
+  }
+};
+$("play").onclick=()=>video.paused?video.play():video.pause();
+$("mute").onclick=()=>{video.muted=!video.muted;$("mute").textContent=video.muted?"🔇":"🔊"};
+video.ontimeupdate=()=>{if(video.duration)$("seek").value=video.currentTime/video.duration*100};
+$("seek").oninput=()=>{if(video.duration)video.currentTime=$("seek").value/100*video.duration};
+
+$("size").oninput=e=>$("sub").style.fontSize=e.target.value+"px";
+$("opacity").oninput=e=>$("sub").style.background=`rgba(0,0,0,${e.target.value/100})`;
+
+async function meter(){
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)(); analyser=audioCtx.createAnalyser(); analyser.fftSize=256;
+  const src=audioCtx.createMediaStreamSource(stream); src.connect(analyser); const data=new Uint8Array(analyser.frequencyBinCount);
+  const draw=()=>{analyser.getByteFrequencyData(data);let s=0;for(const x of data)s+=x*x;let rms=Math.sqrt(s/data.length);$("bar").style.width=Math.min(100,rms*1.8)+"%";raf=requestAnimationFrame(draw)}; draw();
+ }catch(e){setStatus("لم يتم السماح بالميكروفون.")}
+}
+
+async function translate(text){
+ if(!text.trim())return "…";
+ try{
+  const lang=$("lang").value.split("-")[0];
+  const url="https://api.mymemory.translated.net/get?q="+encodeURIComponent(text)+"&langpair="+encodeURIComponent(lang+"|ar");
+  const r=await fetch(url,{cache:"no-store"}); const d=await r.json();
+  return d?.responseData?.translatedText || "تعذرت الترجمة";
+ }catch(e){return "تعذرت الترجمة (تحقق من الإنترنت)"}
+}
+
+function makeRecognition(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){setStatus("التعرف على الكلام غير مدعوم في هذا المتصفح.");return null}
+ const r=new SR(); r.lang=$("lang").value; r.continuous=true; r.interimResults=true; r.maxAlternatives=1;
+ r.onstart=()=>setStatus("🎧 أستمع لصوت الفيلم وأترجم الكلام…");
+ r.onresult=async ev=>{
+  let interim="";
+  for(let i=ev.resultIndex;i<ev.results.length;i++){
+   const tx=ev.results[i][0].transcript;
+   if(ev.results[i].isFinal){
+    finalText=(finalText+" "+tx).trim();
+    const ar=await translate(tx);
+    $("sub").querySelector(".orig").textContent=tx;
+    $("sub").querySelector(".ar").textContent=ar;
+    addRow(tx,ar);
+   }else interim+=tx;
+  }
+  if(interim){$("sub").querySelector(".orig").textContent=interim;$("sub").querySelector(".ar").textContent="…"}
+ };
+ r.onerror=e=>setStatus("التعرف على الكلام: "+e.error);
+ r.onend=()=>{if(listening){try{r.start()}catch(e){}}else setStatus("متوقف")};
+ return r;
+}
+
+$("start").onclick=async()=>{
+ await meter(); finalText=""; recognition=makeRecognition(); if(!recognition)return;
+ listening=true; $("start").disabled=true; $("stop").disabled=false;
+ try{recognition.start()}catch(e){}
+};
+$("stop").onclick=()=>{
+ listening=false; $("start").disabled=false; $("stop").disabled=true;
+ if(recognition)try{recognition.stop()}catch(e){}
+ if(stream)stream.getTracks().forEach(t=>t.stop());
+ if(audioCtx)try{audioCtx.close()}catch(e){}
+ recognition=null; cancelAnimationFrame(raf); $("bar").style.width="0"; setStatus("متوقف");
+};
+
+$("load").click();
+</script>
+</body>
+</html>
